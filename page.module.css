@@ -1,0 +1,8 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export',        // Static HTML export → goes to /out folder
+  trailingSlash: true,
+  images: { unoptimized: true },
+}
+
+module.exports = nextConfig

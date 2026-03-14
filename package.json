@@ -1,0 +1,113 @@
+"""
+main.py - CLI entry point and standalone launcher
+"""
+import asyncio
+import argparse
+import logging
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from scraper import MilanunciosScraper, export_csv, export_excel, export_json
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("scraper.log"),
+    ],
+)
+logger = logging.getLogger(__name__)
+
+
+def on_progress(event: dict):
+    e = event.get("event")
+    if e == "page_start":
+        print(f"  📄 Scraping page {event['page']}...")
+    elif e == "page_done":
+        print(f"  ✅ Page {event['page']} done — {event['found']} listings found")
+    elif e == "listings_found":
+        print(f"\n  🔍 Total listings to process: {event['total']}\n")
+    elif e == "listing_start":
+        print(f"  [{event['current']}/{event['total']}] Processing: {event['url'][:60]}...")
+    elif e == "listing_done":
+        phone = f" 📞 {event['phone']}" if event.get("phone") else ""
+        print(f"  ✓ {event['title'][:50]} — {event['price']}{phone}")
+    elif e == "listing_error":
+        print(f"  ✗ Error on listing {event['current']}: {event.get('error', 'Unknown')}")
+    elif e == "complete":
+        print(f"\n  🎉 Scraping complete! {event['total']} listings collected.\n")
+    elif e == "error":
+        print(f"\n  ❌ Error: {event.get('message')}\n")
+
+
+async def run_cli(args):
+    print(f"""
+╔══════════════════════════════════════════╗
+║      Milanuncios Scraper v1.0            ║
+╚══════════════════════════════════════════╝
+  URL:       {args.url}
+  Max pages: {args.max_pages}
+  Delay:     {args.delay_min}–{args.delay_max}s
+  Format:    {args.format}
+""")
+
+    scraper = MilanunciosScraper(
+        delay_min=args.delay_min,
+        delay_max=args.delay_max,
+        on_progress=on_progress,
+    )
+
+    results = await scraper.scrape(
+        base_url=args.url,
+        max_pages=args.max_pages,
+        min_price=args.min_price,
+        max_price=args.max_price,
+        location_filter=args.location,
+    )
+
+    if not results:
+        print("No results collected.")
+        return
+
+    print(f"Saving {len(results)} records...")
+    if args.format == "csv":
+        path = export_csv(results, args.output or "export.csv")
+    elif args.format == "excel":
+        path = export_excel(results, args.output or "export.xlsx")
+    else:
+        from scraper.exporter import export_json
+        path = export_json(results, args.output or "export.json")
+
+    print(f"✅ Saved to: {path}")
+
+    if scraper.errors:
+        print(f"⚠️  {len(scraper.errors)} errors logged to scraper.log")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Milanuncios Scraper CLI")
+    parser.add_argument("url", help="Milanuncios search URL to scrape")
+    parser.add_argument("--max-pages", type=int, default=5, help="Max pages to scrape (default: 5)")
+    parser.add_argument("--delay-min", type=float, default=3.0, help="Min delay between requests (default: 3.0)")
+    parser.add_argument("--delay-max", type=float, default=7.0, help="Max delay between requests (default: 7.0)")
+    parser.add_argument("--format", choices=["csv", "excel", "json"], default="csv", help="Export format")
+    parser.add_argument("--output", help="Output file path")
+    parser.add_argument("--min-price", type=float, help="Minimum price filter")
+    parser.add_argument("--max-price", type=float, help="Maximum price filter")
+    parser.add_argument("--location", help="Location filter (partial match)")
+    parser.add_argument("--web", action="store_true", help="Launch web UI instead of CLI mode")
+
+    args = parser.parse_args()
+
+    if args.web:
+        import subprocess
+        print("🚀 Launching web UI at http://localhost:8000")
+        subprocess.run(["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"])
+    else:
+        asyncio.run(run_cli(args))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,46 @@
+"""
+Utility functions for the scraper
+"""
+import random
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
+]
+
+
+def get_random_user_agent() -> str:
+    return random.choice(USER_AGENTS)
+
+
+def build_page_url(base_url: str, page_num: int) -> str:
+    """Build paginated URL for Milanuncios."""
+    if page_num == 1:
+        return base_url
+
+    parsed = urlparse(base_url)
+    params = parse_qs(parsed.query)
+    params["pagina"] = [str(page_num)]
+
+    # Rebuild query string
+    query_parts = []
+    for key, values in params.items():
+        for v in values:
+            query_parts.append(f"{key}={v}")
+    new_query = "&".join(query_parts)
+
+    new_parsed = parsed._replace(query=new_query)
+    return urlunparse(new_parsed)
+
+
+def sanitize_text(text: str) -> str:
+    """Clean extracted text."""
+    if not text:
+        return ""
+    return " ".join(text.split())

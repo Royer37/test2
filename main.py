@@ -1,0 +1,10 @@
+playwright==1.42.0
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+pydantic==2.6.3
+pandas==2.2.1
+beautifulsoup4==4.12.3
+requests==2.31.0
+openpyxl==3.1.2
+python-multipart==0.0.9
+aiofiles==23.2.1

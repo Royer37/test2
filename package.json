@@ -1,6 +1,0 @@
-{
-  "name": "milanuncios-scraper",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Milanuncios scraper - Python backend + Next.js frontend"
-}
